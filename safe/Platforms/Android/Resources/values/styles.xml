@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8" ?> 
+<resources>
+  <!-- Base application theme. -->
+  <style name="MainTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <!-- Remove the ActionBar -->
+    <item name="windowActionBar">false</item>
+    <item name="android:windowNoTitle">true</item>
+    <!-- Transparent status bar -->
+    <item name="android:statusBarColor">@color/colorPrimary</item>
+    <!-- Optional: window background -->
+    <item name="android:windowBackground">@android:color/white</item>
+  </style>
+</resources>

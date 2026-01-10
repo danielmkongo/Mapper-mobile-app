@@ -50,8 +50,6 @@ namespace safe
             CreateAnchor("B", MapWidth - 55, -10);
             CreateAnchor("C", -10, MapHeight - 110);
 
-            CreateSubject("Person-1", 120, 160, "Standing", "Initializing…");
-
             _ = StartMqttAsync();
 
             Device.StartTimer(TimeSpan.FromMilliseconds(200), () =>
@@ -88,6 +86,10 @@ namespace safe
             await mqttClient.SubscribeAsync(MQTT_TOPIC);
         }
 
+      readonly Dictionary<string, int> lastGesturePerDevice = new();
+readonly Dictionary<string, int> lastMotionPerDevice = new();
+
+        // 2. Modify HandlePayload dynamic creation to wait for UI thread and then update correctly
         void HandlePayload(string payload)
         {
             try
@@ -95,7 +97,8 @@ namespace safe
                 using var doc = JsonDocument.Parse(payload);
                 var root = doc.RootElement;
 
-                string id = "Person-1";
+                int idInt = root.GetProperty("I").GetInt32();
+                string id = $"Person-{idInt}";
 
                 double temp = root.GetProperty("T").GetDouble();
                 double pressure = root.GetProperty("P").GetDouble();
@@ -112,6 +115,15 @@ namespace safe
                 x = Math.Clamp(x, 0, MapWidth - 56);
                 y = Math.Clamp(y, 0, MapHeight - 56);
 
+                // If device not present, create subject dynamically on UI thread
+                if (!entities.ContainsKey(id))
+                {
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        CreateSubject(id, x, y, "Unknown", "Initializing…");
+                    });
+                }
+
                 if (!trails.ContainsKey(id))
                     trails[id] = new Queue<Point>();
 
@@ -119,39 +131,46 @@ namespace safe
                 q.Enqueue(new Point(x, y));
                 if (q.Count > 18) q.Dequeue();
 
-                // 📈 EVENT-BASED ACTIVITY
+                lastGesturePerDevice.TryGetValue(id, out int lastGesture);
+                lastMotionPerDevice.TryGetValue(id, out int lastMotion);
+
                 if (gesture != lastGesture)
                 {
                     AddActivityValue(2.0f);
-                    lastGesture = gesture;
+                    lastGesturePerDevice[id] = gesture;
                 }
 
                 if (motion == 1 && lastMotion != 1)
+                {
                     AddActivityValue(4.0f);
+                    lastMotionPerDevice[id] = motion;
+                }
                 else
+                {
                     AddActivityValue(0.5f);
-
-                lastMotion = motion;
+                    lastMotionPerDevice[id] = motion;
+                }
 
                 string posture = gesture == 1 ? "🧍 Standing" : "🛌 Lying";
                 string motionText = motion == 1 ? "🏃 Moving" : "⏸ Still";
 
                 string[] extras =
                 {
-                    "Person-1",
-                    posture,
-                    $"🌡 {temp:F1} °C",
-                    $"⏲ {pressure:F0} hPa",
-                    motionText
-                };
+            id,
+            posture,
+            $"🌡 {temp:F1} °C",
+            $"⏲ {pressure:F0} hPa",
+            motionText
+        };
 
                 UpdateEntityPosition(id, x, y, extras);
 
-                // Add motion trace dot at center of subject icon (56x56)
                 AddMotionTrace(x + 28, y + 28);
             }
             catch { }
         }
+
+
 
         #endregion
 
@@ -209,7 +228,8 @@ namespace safe
         }
 
 
-        void CreateSubject(string id, double x, double y, string posture, string vitals)
+        // 1. Add this helper to create subject **and return the popup** so you can store it easily
+        Frame CreateSubject(string id, double x, double y, string posture, string vitals)
         {
             var container = new AbsoluteLayout { WidthRequest = 56, HeightRequest = 56 };
 
@@ -251,8 +271,12 @@ namespace safe
             MapLayout.Children.Add(container);
 
             StartPulseAnimation(pulse);
+
             entities[id] = (container, popup);
+
+            return popup;  // return popup Frame for further usage if needed
         }
+
 
 
         async void StartPulseAnimation(VisualElement pulse)
@@ -266,6 +290,8 @@ namespace safe
             }
         }
 
+        // 3. Update UpdateEntityPosition to update the popup label properly
+
         void UpdateEntityPosition(string id, double x, double y, string[] extras)
         {
             if (!entities.TryGetValue(id, out var e)) return;
@@ -276,7 +302,7 @@ namespace safe
                     e.container,
                     new Rect(x, y, e.container.WidthRequest, e.container.HeightRequest));
 
-                if (e.popup.Content is Label lbl)
+                if (e.popup != null && e.popup.Content is Label lbl)
                     lbl.Text = string.Join("\n", extras);
             });
         }

@@ -95,3 +95,15 @@ location /mapper/ {
     proxy_read_timeout 1h;
 }
 ```
+
+## Phone app
+
+[../safe](../safe) is the Android app, a .NET MAUI shell around this console. It targets .NET 8 (.NET 6 MAUI is out of support).
+
+- **First run:** it asks for the hub address and remembers it.
+- **Connection screen:** shown whenever the hub can't be reached.
+- **While monitoring:** it keeps the screen on.
+
+Everything else (twin, people, alerts) is this web app, so the phone and the control room always match. Build it in Visual Studio 2022 with the .NET MAUI workload installed. The app id is `com.vortan.mapper`, so v2 installs alongside the old app.
+
+Without the native app, a phone can also use the console directly: open the hub URL in Chrome and choose "Add to Home screen".

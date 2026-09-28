@@ -1,8 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net6.0-android;net6.0-maccatalyst;net7.0-ios</TargetFrameworks>
-		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net6.0-windows10.0.19041.0</TargetFrameworks>
+		<!-- .NET 6 MAUI is out of support; .NET 8 is the current LTS for MAUI. -->
+		<TargetFrameworks>net8.0-android</TargetFrameworks>
+		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net8.0-windows10.0.19041.0</TargetFrameworks>
+		<Nullable>enable</Nullable>
 		<!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
 		<!-- <TargetFrameworks>$(TargetFrameworks);net6.0-tizen</TargetFrameworks> -->
 		<OutputType>Exe</OutputType>
@@ -12,19 +14,19 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 
 		<!-- Display name -->
-		<ApplicationTitle>safe</ApplicationTitle>
+		<ApplicationTitle>Mapper</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>com.companyname.safe</ApplicationId>
+		<ApplicationId>com.vortan.mapper</ApplicationId>
 		<ApplicationIdGuid>01c19fa0-c96a-4933-80dc-152e2536fd00</ApplicationIdGuid>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
-		<ApplicationVersion>1</ApplicationVersion>
+		<ApplicationDisplayVersion>2.0</ApplicationDisplayVersion>
+		<ApplicationVersion>2</ApplicationVersion>
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">14.2</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">14.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
@@ -39,8 +41,7 @@
 		
 
 		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\AppIcon\mapper.png" />
-		<MauiSplashScreen Include="Resources\Splash\mapper.svg" BaseSize="150,150" Color="#FFFFFF" />
+		<MauiSplashScreen Include="Resources\Splash\mapper.svg" BaseSize="150,150" Color="#0B1016" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
@@ -68,9 +69,6 @@
 
 
 	<ItemGroup>
-	  <PackageReference Include="MQTTnet" Version="4.3.6.1152" />
-	  <PackageReference Include="SkiaSharp.Views" Version="2.88.9" />
-	  <PackageReference Include="SkiaSharp.Views.Maui.Controls" Version="2.88.9" />
 	</ItemGroup>
 
 	<ItemGroup>

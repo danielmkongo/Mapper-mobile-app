@@ -1,56 +1,57 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  Mapper mobile: a native shell around the hub's live console (3D twin, people, alerts).
+  The console is the same web app the control room uses, so phone and desktop never
+  disagree; this page adds what only a native app can: remembering the hub, a proper
+  connection screen, and keeping the screen awake while monitoring.
+-->
 <ContentPage
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     x:Class="safe.MainPage"
-    BackgroundColor="#071224">
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="#0B1016">
 
-    <Grid RowDefinitions="Auto, * , Auto" Padding="12,-10,12,12" >
+    <Grid>
+        <WebView x:Name="Console"
+                 Navigating="OnNavigating"
+                 Navigated="OnNavigated" />
 
-        <!-- Header -->
-        <Grid Row="0" HeightRequest="50" Padding="4">
-            <Frame BackgroundColor="#05283E" HasShadow="False" Padding="10" CornerRadius="0">
-                <Grid>
-                    <!--<Label Text="←" HorizontalOptions="Start" VerticalOptions="Center" TextColor="White" FontAttributes="Bold" />-->
-                    <Label Text="Mapper" HorizontalOptions="Center" VerticalOptions="Center" TextColor="White" FontSize="14" />
-                </Grid>
-            </Frame>
-        </Grid>
+        <!-- Connection screen: first run, or whenever the hub cannot be reached -->
+        <Grid x:Name="Connect" BackgroundColor="#0B1016" Padding="28,0">
+            <VerticalStackLayout VerticalOptions="Center" Spacing="18" MaximumWidthRequest="420">
 
-        <!-- Middle map / layout -->
-        <ScrollView Grid.Row="1" Orientation="Vertical" HorizontalOptions="Fill" VerticalOptions="Fill">
-            <VerticalStackLayout Spacing="20" HorizontalOptions="Center" Padding="0">
-
-                <!-- Container for MapLayout to fix size & center -->
-                <Grid WidthRequest="360" HeightRequest="500" HorizontalOptions="Center" VerticalOptions="Center">
-                    <AbsoluteLayout x:Name="MapLayout" HeightRequest="450" WidthRequest="360" BackgroundColor="#22293A" >
-
-                        <!-- Room blueprint border (approximate) -->
-                        <Frame AbsoluteLayout.LayoutBounds="0.05,0.05,0.96,0.96" AbsoluteLayout.LayoutFlags="SizeProportional"
-                               BackgroundColor="#2d343b" BorderColor="#9aa7b1" CornerRadius="4" Opacity="0.4" HasShadow="False" Padding="0">
-                            <!-- Optional: add blueprint interior lines using BoxViews or shapes here -->
-                        </Frame>
-
-                        <!-- Anchors and subjects will be added dynamically in code-behind -->
-                    </AbsoluteLayout>
+                <Grid HeightRequest="96" WidthRequest="96" HorizontalOptions="Center">
+                    <Ellipse Stroke="#3FC6FF" StrokeThickness="2" Opacity="0.35" WidthRequest="96" HeightRequest="96" />
+                    <Ellipse Stroke="#3FC6FF" StrokeThickness="2" Opacity="0.7" WidthRequest="60" HeightRequest="60" />
+                    <Ellipse Fill="#3FC6FF" WidthRequest="22" HeightRequest="22" />
                 </Grid>
 
-                <!-- Legend -->
-                <VerticalStackLayout HorizontalOptions="Center" Spacing="6" Padding="5,0,5,0">
-                    <Label Text="•    Red: UWB Devices (People)" TextColor="White" FontSize="12" />
-                    <Label Text="•    Green: UWB Anchors (Temp)" TextColor="White" FontSize="12" />
-                    <Label Text="•    Blue Waves: Signal Range" TextColor="#3fb0ff" FontSize="12" />
+                <Label Text="MAPPER" TextColor="#E7EDF3" FontSize="30" FontAttributes="Bold"
+                       CharacterSpacing="6" HorizontalOptions="Center" />
+                <Label Text="Live indoor tracking" TextColor="#8B98A8" FontSize="15" HorizontalOptions="Center" />
+
+                <Border x:Name="StatusCard" BackgroundColor="#141B24" Stroke="#243241" StrokeThickness="1"
+                        Padding="14,12" StrokeShape="RoundRectangle 12" IsVisible="False">
+                    <Label x:Name="Status" TextColor="#FFB020" FontSize="14" LineBreakMode="WordWrap" />
+                </Border>
+
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Hub address" TextColor="#8B98A8" FontSize="13" />
+                    <Border BackgroundColor="#141B24" Stroke="#243241" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="12,2">
+                        <Entry x:Name="HubUrl" TextColor="#E7EDF3" PlaceholderColor="#5D6B7B"
+                               Placeholder="http://192.168.1.20:8080" Keyboard="Url"
+                               ReturnType="Go" Completed="OnConnect" />
+                    </Border>
+                    <Label Text="The computer or server running the Mapper hub. On the same Wi-Fi, use its IP and port 8080."
+                           TextColor="#5D6B7B" FontSize="12" LineBreakMode="WordWrap" />
                 </VerticalStackLayout>
 
-                <!-- Activity title -->
-                <Label Text="Overall Room Activity" TextColor="White" FontAttributes="Bold" FontSize="16" HorizontalOptions="Start" />
-
-                <!-- Activity graph using SkiaSharp -->
-                <Frame BackgroundColor="#0b1b2a" HasShadow="False" Padding="8" CornerRadius="6" HeightRequest="140" WidthRequest="360">
-                    <GraphicsView x:Name="ActivityGraphView" HeightRequest="140" WidthRequest="344" />
-                </Frame>
-
+                <Button x:Name="ConnectButton" Text="Connect" Clicked="OnConnect"
+                        BackgroundColor="#3FC6FF" TextColor="#06121C" FontAttributes="Bold"
+                        CornerRadius="10" HeightRequest="50" />
+                <ActivityIndicator x:Name="Busy" Color="#3FC6FF" IsRunning="False" IsVisible="False" />
             </VerticalStackLayout>
-        </ScrollView>
+        </Grid>
     </Grid>
 </ContentPage>

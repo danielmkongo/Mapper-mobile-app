@@ -1,5 +1,3 @@
-﻿using SkiaSharp.Views.Maui.Controls.Hosting;
-
 namespace safe;
 
 public static class MauiProgram
@@ -13,7 +11,7 @@ public static class MauiProgram
 			{
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
 				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-			}).UseSkiaSharp();
+			});
 
 		return builder.Build();
 	}

@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Runs ON THE SERVER (as root), started by deploy.sh. Safe to re-run: every step checks
-# before it changes anything, and nginx is only reloaded if its config test passes.
+# Runs ON THE SERVER (as root), started by deploy.sh. Safe to re-run: it updates the
+# app in place and keeps the server's config/room.json (anchor positions measured on site).
+# The hub serves the twin itself on PORT - no nginx or other web server involved.
 set -euo pipefail
 
 APP=/opt/mapper-hub
 NEW=/opt/mapper-hub.new
-PORT=8080
+PORT=${PORT:-7000}
 
 say() { printf '\n== %s\n' "$*"; }
 
@@ -51,7 +52,7 @@ Wants=network-online.target
 User=mapper
 WorkingDirectory=$APP
 Environment=PORT=$PORT
-Environment=HOST=127.0.0.1
+Environment=HOST=0.0.0.0
 ExecStart=$(command -v node) server.js
 Restart=always
 RestartSec=3
@@ -66,57 +67,14 @@ sleep 2
 systemctl --no-pager --lines=5 status mapper-hub || true
 curl -fsS "http://127.0.0.1:$PORT/api/config" >/dev/null && echo "hub answering on 127.0.0.1:$PORT"
 
-# ---- nginx -----------------------------------------------------------------
-say "nginx"
-SNIPPET=/etc/nginx/snippets/mapper-hub.conf
-mkdir -p /etc/nginx/snippets
-cat >"$SNIPPET" <<EOF
-# Mapper hub - added by mapper-hub/deploy/remote-setup.sh
-location = /mapper { return 301 /mapper/; }
-location /mapper/ {
-    proxy_pass http://127.0.0.1:$PORT/;
-    proxy_http_version 1.1;
-    proxy_set_header Host \$host;
-    proxy_set_header Connection '';
-    proxy_buffering off;        # the live event stream must not be buffered
-    proxy_cache off;
-    proxy_read_timeout 1h;
-}
-EOF
-
-# Include the snippet in every enabled server block that listens on port 80, once.
-# Backups go OUTSIDE sites-enabled: nginx loads every file in there, backups included.
-BACKUP=/etc/nginx/mapper-backup
-mkdir -p "$BACKUP"
-changed=0
-for f in /etc/nginx/sites-enabled/*; do
-  [ -f "$f" ] || continue
-  grep -q 'snippets/mapper-hub.conf' "$f" && continue
-  grep -Eq 'listen[^;]*\b80\b' "$f" || continue
-  b="$BACKUP/$(basename "$f")"
-  cp -L "$f" "$b"
-  # insert after the first "listen ... 80" line (inside that server block)
-  awk '{print} /listen[^;]*[^0-9]80[^0-9]/ && !done {print "    include snippets/mapper-hub.conf;"; done=1}' "$b" >"$f.tmp-mapper"
-  cat "$f.tmp-mapper" >"$f"   # write through a symlink to sites-available, keep the link
-  rm -f "$f.tmp-mapper"
-  echo "added include to $f (backup: $b)"
-  changed=1
-done
-
-if nginx -t; then
-  systemctl reload nginx
-  echo "nginx reloaded"
+# ---- firewall ---------------------------------------------------------------
+say "Firewall"
+if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then
+  ufw allow "$PORT/tcp" >/dev/null && echo "ufw: opened $PORT/tcp"
 else
-  echo "nginx config test FAILED - restoring the previous config"
-  for b in "$BACKUP"/*; do [ -f "$b" ] && cat "$b" >"/etc/nginx/sites-enabled/$(basename "$b")"; done
-  nginx -t && systemctl reload nginx
-  exit 1
-fi
-if ! grep -rqs 'snippets/mapper-hub.conf' /etc/nginx/; then
-  echo "Could not find a port-80 server block in /etc/nginx/sites-enabled to add /mapper/ to."
-  echo "Add this line inside your port-80 server { } block, then run: nginx -t && systemctl reload nginx"
-  echo "    include snippets/mapper-hub.conf;"
+  echo "ufw not active - nothing to open on the server itself"
 fi
 
-IP=$(hostname -I | awk '{print $1}')
-say "Done: open http://$IP/mapper/"
+IP=$(curl -fsS -m 5 https://api.ipify.org 2>/dev/null || hostname -I | awk '{print $1}')
+say "Done: open http://$IP:$PORT/"
+echo "If it does not load from outside, open TCP $PORT in your hosting provider's firewall too."

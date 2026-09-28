@@ -87,16 +87,19 @@ The avatar is `Xbot.glb` from the three.js examples (a Mixamo character). Figure
 From Git Bash on a PC that can SSH into the server:
 
 ```bash
-bash deploy/deploy.sh root@45.79.206.183
+bash deploy/deploy.sh root@45.79.206.183        # port 7000
+bash deploy/deploy.sh root@45.79.206.183 8000   # another port
 ```
 
 You'll type the password once. The script uploads this folder and runs [deploy/remote-setup.sh](deploy/remote-setup.sh) on the server, which:
 
 - installs Node 20 if it's missing;
-- runs the hub as the `mapper-hub` systemd service, under its own `mapper` user and listening on localhost only;
-- adds `/mapper/` to nginx. It backs up the site config, runs `nginx -t`, and restores the old config if the test fails.
+- runs the hub as the `mapper-hub` systemd service, under its own `mapper` user. The hub serves the twin itself on that port, so no nginx is needed. It starts on boot and restarts if it crashes;
+- opens the port in `ufw` if ufw is active.
 
-The twin is then at **http://45.79.206.183/mapper/**, and that is also the address the phone app uses. Re-running the script updates the hub and keeps the server's `config/room.json`, so anchor positions measured on site survive updates.
+The twin is then at **http://45.79.206.183:7000/**, and that is also the address to give the phone app. If it doesn't load from outside, open TCP 7000 in the hosting provider's firewall (for example Linode Cloud Firewall) as well.
+
+Re-running the script updates the hub and keeps the server's `config/room.json`, so anchor positions measured on site survive updates.
 
 Useful on the server:
 - `journalctl -u mapper-hub -f` shows the logs.

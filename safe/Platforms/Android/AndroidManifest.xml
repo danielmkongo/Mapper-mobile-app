@@ -4,5 +4,5 @@
 	<application android:allowBackup="true" android:supportsRtl="true" android:label="Mapper" android:icon="@mipmap/logoimage" android:usesCleartextTraffic="true" android:hardwareAccelerated="true"></application>
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 	<uses-permission android:name="android.permission.INTERNET" />
-	<uses-sdk android:minSdkVersion="29" android:targetSdkVersion="34" />
+	<uses-sdk android:minSdkVersion="29" android:targetSdkVersion="33" />
 </manifest>

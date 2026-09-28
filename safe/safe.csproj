@@ -17,7 +17,7 @@
 		<ApplicationTitle>Mapper</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>com.vortan.mapper</ApplicationId>
+		<ApplicationId>com.mapper.live</ApplicationId>
 		<ApplicationIdGuid>01c19fa0-c96a-4933-80dc-152e2536fd00</ApplicationIdGuid>
 
 		<!-- Versions -->

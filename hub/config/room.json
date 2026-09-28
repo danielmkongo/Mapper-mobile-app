@@ -1,0 +1,32 @@
+{
+  "_comment": "Room frame: origin at the floor in the window/orange-panel corner. x runs along the window wall (m), z runs away from the window into the room (m), y is height. Measure the anchors with a tape from that corner and put the numbers here - nothing else needs to change.",
+
+  "name": "Vortan Lab",
+  "size": { "x": 4.0, "z": 3.75, "height": 2.7 },
+
+  "anchors": [
+    { "id": "A", "x": 0.15, "y": 2.20, "z": 0.15 },
+    { "id": "B", "x": 3.85, "y": 2.20, "z": 0.15 },
+    { "id": "C", "x": 0.15, "y": 2.20, "z": 3.60 }
+  ],
+
+  "tagHeight": 1.10,
+  "tagHeightLying": 0.25,
+
+  "people": {
+    "5": { "name": "Daniel", "role": "Engineer" }
+  },
+
+  "mqtt": {
+    "url": "mqtt://45.79.206.183:1883",
+    "topic": "/mapper/data",
+    "publishTopic": "/mapper/pos"
+  },
+
+  "alerts": {
+    "manDownSeconds": 8,
+    "stillSeconds": 60,
+    "offlineSeconds": 6,
+    "highTempC": 45
+  }
+}

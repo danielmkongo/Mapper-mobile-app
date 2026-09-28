@@ -28,13 +28,13 @@ namespace safe
         const double MapWidth = 360;
         const double MapHeight = 500;
 
-        const double ROOM_WIDTH_RAW = 3000.0;
-        const double ROOM_HEIGHT_RAW = 3000.0;
+        const double ROOM_WIDTH_RAW = 380.0;
+        const double ROOM_HEIGHT_RAW = 710.0;
 
         ActivityGraphDrawable graphDrawable;
 
-        int lastGesture = -1;
-        int lastMotion = -1;
+        readonly Dictionary<string, int> lastGesturePerDevice = new();
+        readonly Dictionary<string, int> lastMotionPerDevice = new();
 
         public MainPage()
         {
@@ -45,7 +45,7 @@ namespace safe
             graphDrawable = new ActivityGraphDrawable();
             ActivityGraphView.Drawable = graphDrawable;
 
-            // ✅ EXACTLY THREE ANCHORS — A, B, C
+            // Anchors
             CreateAnchor("A", -10, -10);
             CreateAnchor("B", MapWidth - 55, -10);
             CreateAnchor("C", -10, MapHeight - 110);
@@ -86,10 +86,6 @@ namespace safe
             await mqttClient.SubscribeAsync(MQTT_TOPIC);
         }
 
-      readonly Dictionary<string, int> lastGesturePerDevice = new();
-readonly Dictionary<string, int> lastMotionPerDevice = new();
-
-        // 2. Modify HandlePayload dynamic creation to wait for UI thread and then update correctly
         void HandlePayload(string payload)
         {
             try
@@ -106,21 +102,27 @@ readonly Dictionary<string, int> lastMotionPerDevice = new();
                 int motion = root.GetProperty("M").GetInt32();
 
                 var u = root.GetProperty("U");
-                double rawX = u[0].GetDouble();
-                double rawY = u[1].GetDouble();
+                double rawX = u[0].GetDouble() * 1000.0;
+                double rawY = u[1].GetDouble() * 1000.0;
 
-                double x = MapWidth * (rawX / ROOM_WIDTH_RAW);
-                double y = MapHeight * (rawY / ROOM_HEIGHT_RAW);
+                const double POSITION_GAIN = 1.6;
+
+                double x = MapWidth * (rawX / ROOM_WIDTH_RAW) * POSITION_GAIN;
+                double y = MapHeight * (rawY / ROOM_HEIGHT_RAW) * POSITION_GAIN;
+
+                // tiny epsilon to avoid clamp-freeze
+                x += (rawX % 1) * 0.8;
+                y += (rawY % 1) * 0.8;
 
                 x = Math.Clamp(x, 0, MapWidth - 56);
                 y = Math.Clamp(y, 0, MapHeight - 56);
 
-                // If device not present, create subject dynamically on UI thread
+                // ✅ CREATE SUBJECT IF NEEDED — DO NOT RETURN
                 if (!entities.ContainsKey(id))
                 {
                     MainThread.BeginInvokeOnMainThread(() =>
                     {
-                        CreateSubject(id, x, y, "Unknown", "Initializing…");
+                        CreateSubject(id, x, y, "", "");
                     });
                 }
 
@@ -156,26 +158,25 @@ readonly Dictionary<string, int> lastMotionPerDevice = new();
 
                 string[] extras =
                 {
-            id,
-            posture,
-            $"🌡 {temp:F1} °C",
-            $"⏲ {pressure:F0} hPa",
-            motionText
-        };
+                    id,
+                    posture,
+                    motionText,
+                    $"🌡 {temp:F1} °C",
+                    $"⏲ {pressure:F0} hPa"
+                };
 
                 UpdateEntityPosition(id, x, y, extras);
-
                 AddMotionTrace(x + 28, y + 28);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Payload error: {ex.Message}");
+            }
         }
-
-
 
         #endregion
 
         #region UI
-
 
         void CreateAnchor(string id, double x, double y)
         {
@@ -188,8 +189,6 @@ readonly Dictionary<string, int> lastMotionPerDevice = new();
                 Fill = new SolidColorBrush(Color.FromArgb("#2A8F64")),
                 Opacity = 0.18
             };
-            AbsoluteLayout.SetLayoutBounds(pulse, new Rect(0.5, 0.5, 96, 96));
-            AbsoluteLayout.SetLayoutFlags(pulse, AbsoluteLayoutFlags.PositionProportional);
 
             var dot = new Ellipse
             {
@@ -199,8 +198,6 @@ readonly Dictionary<string, int> lastMotionPerDevice = new();
                 Stroke = new SolidColorBrush(Color.FromArgb("#88ffffff")),
                 StrokeThickness = 1.2
             };
-            AbsoluteLayout.SetLayoutBounds(dot, new Rect(0.5, 0.5, 20, 20));
-            AbsoluteLayout.SetLayoutFlags(dot, AbsoluteLayoutFlags.PositionProportional);
 
             var label = new Label
             {
@@ -213,6 +210,11 @@ readonly Dictionary<string, int> lastMotionPerDevice = new();
                 HeightRequest = 20,
                 InputTransparent = true
             };
+
+            AbsoluteLayout.SetLayoutBounds(pulse, new Rect(0.5, 0.5, 96, 96));
+            AbsoluteLayout.SetLayoutFlags(pulse, AbsoluteLayoutFlags.PositionProportional);
+            AbsoluteLayout.SetLayoutBounds(dot, new Rect(0.5, 0.5, 20, 20));
+            AbsoluteLayout.SetLayoutFlags(dot, AbsoluteLayoutFlags.PositionProportional);
             AbsoluteLayout.SetLayoutBounds(label, new Rect(0.5, 0.5, 20, 20));
             AbsoluteLayout.SetLayoutFlags(label, AbsoluteLayoutFlags.PositionProportional);
 
@@ -224,11 +226,9 @@ readonly Dictionary<string, int> lastMotionPerDevice = new();
             MapLayout.Children.Add(container);
 
             StartPulseAnimation(pulse);
-            entities[id] = (container, null); // No popup for anchors
+            entities[id] = (container, null);
         }
 
-
-        // 1. Add this helper to create subject **and return the popup** so you can store it easily
         Frame CreateSubject(string id, double x, double y, string posture, string vitals)
         {
             var container = new AbsoluteLayout { WidthRequest = 56, HeightRequest = 56 };
@@ -256,7 +256,7 @@ readonly Dictionary<string, int> lastMotionPerDevice = new();
                 Padding = 8,
                 Content = new Label
                 {
-                    Text = $"{id}\n{posture}\n{vitals}",
+                    Text = "",
                     TextColor = Colors.White,
                     FontSize = 12,
                     WidthRequest = 170
@@ -271,13 +271,10 @@ readonly Dictionary<string, int> lastMotionPerDevice = new();
             MapLayout.Children.Add(container);
 
             StartPulseAnimation(pulse);
-
             entities[id] = (container, popup);
 
-            return popup;  // return popup Frame for further usage if needed
+            return popup;
         }
-
-
 
         async void StartPulseAnimation(VisualElement pulse)
         {
@@ -290,8 +287,6 @@ readonly Dictionary<string, int> lastMotionPerDevice = new();
             }
         }
 
-        // 3. Update UpdateEntityPosition to update the popup label properly
-
         void UpdateEntityPosition(string id, double x, double y, string[] extras)
         {
             if (!entities.TryGetValue(id, out var e)) return;
@@ -302,12 +297,11 @@ readonly Dictionary<string, int> lastMotionPerDevice = new();
                     e.container,
                     new Rect(x, y, e.container.WidthRequest, e.container.HeightRequest));
 
-                if (e.popup != null && e.popup.Content is Label lbl)
+                if (e.popup?.Content is Label lbl)
                     lbl.Text = string.Join("\n", extras);
             });
         }
 
-        // Added: short-lived fading motion trace dot
         void AddMotionTrace(double x, double y)
         {
             var dot = new Ellipse
@@ -346,20 +340,16 @@ readonly Dictionary<string, int> lastMotionPerDevice = new();
 
         public void Draw(ICanvas canvas, RectF dirtyRect)
         {
-            if (Values.Count < 2)
-                return;
+            if (Values.Count < 2) return;
 
             float width = dirtyRect.Width;
             float height = dirtyRect.Height;
             float step = width / (Values.Count - 1);
 
-            // Helper to calculate Y position for value i
             float GetY(int i) =>
                 height - (Values[i] / 6f * height * 0.6f + 8);
 
-            // Build a smooth path using quadratic Bezier curves
             var path = new PathF();
-
             path.MoveTo(0, GetY(0));
 
             for (int i = 1; i < Values.Count; i++)
@@ -368,44 +358,34 @@ readonly Dictionary<string, int> lastMotionPerDevice = new();
                 float y0 = GetY(i - 1);
                 float x1 = i * step;
                 float y1 = GetY(i);
-
-                // Midpoint between current and previous point
                 float cx = (x0 + x1) / 2;
                 float cy = (y0 + y1) / 2;
 
-                // Draw quadratic bezier curve from previous point to midpoint
                 path.QuadTo(x0, y0, cx, cy);
-
-                // For last point, connect midpoint to last point
                 if (i == Values.Count - 1)
                     path.QuadTo(cx, cy, x1, y1);
             }
 
-            // Stroke line (smooth curve)
             canvas.StrokeColor = Colors.DeepSkyBlue;
             canvas.StrokeSize = 3;
             canvas.DrawPath(path);
 
-            // Build the fill path for gradient below the line
             var fillPath = new PathF(path);
-            fillPath.LineTo(width, height);  // down to bottom-right corner
-            fillPath.LineTo(0, height);      // bottom-left corner
+            fillPath.LineTo(width, height);
+            fillPath.LineTo(0, height);
             fillPath.Close();
 
-            // Create vertical gradient brush (top = solid blue, bottom = transparent)
             var gradient = new LinearGradientBrush(
                 new GradientStopCollection
                 {
-                new GradientStop(Colors.DeepSkyBlue.WithAlpha(0.4f), 0f),
-                new GradientStop(Colors.DeepSkyBlue.WithAlpha(0.0f), 1f)
+                    new GradientStop(Colors.DeepSkyBlue.WithAlpha(0.4f), 0f),
+                    new GradientStop(Colors.DeepSkyBlue.WithAlpha(0f), 1f)
                 },
                 new Point(0, 0),
                 new Point(0, 1));
 
-            // Fill the area under the curve with gradient
             canvas.SetFillPaint(gradient, dirtyRect);
             canvas.FillPath(fillPath);
         }
     }
-
 }

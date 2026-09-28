@@ -5,18 +5,20 @@ namespace safe;
 public partial class MainPage : ContentPage
 {
     const string HubKey = "hubUrl";
+    // The deployed hub. The app opens straight onto it; the address screen only appears if
+    // it can't be reached (then you can point it at a local hub instead).
+    const string DefaultHub = "http://45.79.206.183:7000/";
     bool loaded;
 
     public MainPage()
     {
         InitializeComponent();
-        HubUrl.Text = Preferences.Get(HubKey, "");
+        HubUrl.Text = Preferences.Get(HubKey, DefaultHub);
 
         // A monitoring screen must not go dark in someone's hand.
         DeviceDisplay.Current.KeepScreenOn = true;
 
-        if (!string.IsNullOrWhiteSpace(HubUrl.Text))
-            Load(HubUrl.Text);
+        Load(HubUrl.Text);
     }
 
     void OnConnect(object sender, EventArgs e)
@@ -24,7 +26,7 @@ public partial class MainPage : ContentPage
         var url = Normalise(HubUrl.Text);
         if (url is null)
         {
-            ShowStatus("Enter the hub address, for example http://192.168.1.20:8080");
+            ShowStatus($"Enter the hub address, for example {DefaultHub}");
             return;
         }
         HubUrl.Text = url;
@@ -44,7 +46,7 @@ public partial class MainPage : ContentPage
     void OnNavigating(object sender, WebNavigatingEventArgs e)
     {
         // Keep the console in the app, send anything else (docs, maps) to the browser.
-        var hub = Preferences.Get(HubKey, "");
+        var hub = Preferences.Get(HubKey, DefaultHub);
         if (loaded && !string.IsNullOrEmpty(hub) && !e.Url.StartsWith(hub, StringComparison.OrdinalIgnoreCase))
         {
             e.Cancel = true;

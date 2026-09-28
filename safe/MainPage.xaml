@@ -40,10 +40,10 @@
                     <Label Text="Hub address" TextColor="#8B98A8" FontSize="13" />
                     <Border BackgroundColor="#141B24" Stroke="#243241" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="12,2">
                         <Entry x:Name="HubUrl" TextColor="#E7EDF3" PlaceholderColor="#5D6B7B"
-                               Placeholder="http://192.168.1.20:8080" Keyboard="Url"
+                               Placeholder="http://45.79.206.183:7000" Keyboard="Url"
                                ReturnType="Go" Completed="OnConnect" />
                     </Border>
-                    <Label Text="The computer or server running the Mapper hub. On the same Wi-Fi, use its IP and port 8080."
+                    <Label Text="The server running the Mapper hub."
                            TextColor="#5D6B7B" FontSize="12" LineBreakMode="WordWrap" />
                 </VerticalStackLayout>
 

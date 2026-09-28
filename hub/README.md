@@ -84,17 +84,23 @@ The avatar is `Xbot.glb` from the three.js examples (a Mixamo character). Figure
 
 ## Deploying on the broker server
 
-The server at 45.79.206.183 already runs nginx. Run the hub there (`PORT=8080 npm start`, under pm2 or systemd) and proxy it:
+From Git Bash on a PC that can SSH into the server:
 
-```nginx
-location /mapper/ {
-    proxy_pass http://127.0.0.1:8080/;
-    proxy_http_version 1.1;
-    proxy_set_header Connection '';
-    proxy_buffering off;          # required for the live event stream
-    proxy_read_timeout 1h;
-}
+```bash
+bash deploy/deploy.sh root@45.79.206.183
 ```
+
+You'll type the password once. The script uploads this folder and runs [deploy/remote-setup.sh](deploy/remote-setup.sh) on the server, which:
+
+- installs Node 20 if it's missing;
+- runs the hub as the `mapper-hub` systemd service, under its own `mapper` user and listening on localhost only;
+- adds `/mapper/` to nginx. It backs up the site config, runs `nginx -t`, and restores the old config if the test fails.
+
+The twin is then at **http://45.79.206.183/mapper/**, and that is also the address the phone app uses. Re-running the script updates the hub and keeps the server's `config/room.json`, so anchor positions measured on site survive updates.
+
+Useful on the server:
+- `journalctl -u mapper-hub -f` shows the logs.
+- `systemctl restart mapper-hub` restarts the hub.
 
 ## Phone app
 

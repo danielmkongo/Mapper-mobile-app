@@ -21,9 +21,11 @@ import { startDemo } from './src/demo.js';
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const CONFIG_PATH = path.join(ROOT, 'config', 'room.json');
 const PORT = Number(process.env.PORT || 8080);
+const HOST = process.env.HOST || '0.0.0.0'; // 127.0.0.1 when nginx fronts it
 const DEMO = process.argv.includes('--demo');
 
 const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+if (process.env.MQTT_URL) config.mqtt.url = process.env.MQTT_URL;
 const tracker = new Tracker(config);
 
 // ---------------------------------------------------------------------------
@@ -155,6 +157,6 @@ const server = http.createServer((req, res) => {
   serveStatic(req, res);
 });
 
-server.listen(PORT, () => {
-  console.log(`Mapper hub on http://localhost:${PORT}  (${DEMO ? 'demo' : config.mqtt.url})`);
+server.listen(PORT, HOST, () => {
+  console.log(`Mapper hub on http://${HOST}:${PORT}  (${DEMO ? 'demo' : config.mqtt.url})`);
 });

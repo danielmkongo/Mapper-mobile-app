@@ -68,9 +68,12 @@ export function startDemo(config, ingest) {
   config.people = { '5': { name: 'Daniel', role: 'Engineer' }, '7': { name: 'Amina', role: 'Technician' }, ...config.people };
 
   const TICK = 1000; // same cadence as the real node
+  const seq = {};
   setInterval(() => {
     for (const w of walkers) {
       const s = w.step(TICK / 1000);
+      seq[w.id] = ((seq[w.id] ?? -1) + 1) % 256;
+      if (Math.random() < 0.03) continue; // ~3% of LoRa packets lost on the way
       const tagY = s.lying ? 0.25 : config.tagHeight;
       const U = config.anchors.map((a) => {
         if (Math.random() < 0.04) return 0; // occasional missed range, like the real link
@@ -84,6 +87,7 @@ export function startDemo(config, ingest) {
         G: s.lying ? 0 : 1,
         M: s.moving ? 1 : 0,
         U,
+        S: seq[w.id],
       }));
     }
   }, TICK);

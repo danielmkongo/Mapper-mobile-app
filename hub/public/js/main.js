@@ -11,7 +11,9 @@ import { buildRoom, zoneAt } from './room.js';
 import { loadAvatar, Person, STATUS_COLORS, escapeHtml } from './people.js';
 
 const $ = (id) => document.getElementById(id);
-const HUB = location.origin; // the hub serves this page; the app points its web view here
+// The hub serves this page, at the site root locally or under a path behind nginx
+// (e.g. /mapper/), so every request is relative to where the page was loaded from.
+const HUB = new URL('.', location.href).href.replace(/\/$/, '');
 
 // ---------------------------------------------------------------------------
 // Settings a viewer can change, remembered per device.
@@ -227,6 +229,7 @@ async function main() {
           <div class="stat"><div class="stat-k">Posture</div><div class="stat-v">${d.posture === 'lying' ? `Lying ${d.lyingFor}s` : 'Upright'}</div></div>
           <div class="stat"><div class="stat-k">Temp</div><div class="stat-v">${d.temp ?? '–'}${d.temp ? ' °C' : ''}</div></div>
           <div class="stat"><div class="stat-k">Fix</div><div class="stat-v">${d.accuracy ? `±${d.accuracy.toFixed(1)} m` : '–'} · ${d.anchorsUsed}/3</div></div>
+          <div class="stat"><div class="stat-k">Link</div><div class="stat-v" data-weak="${d.link !== null && d.link < 0.8}">${d.link === null ? '–' : `${Math.round(d.link * 100)}%`}</div></div>
         </div>
         <div class="card-where">${escapeHtml(where)}</div>
       </button>`;

@@ -38,12 +38,25 @@ export class Tracker {
         lastSeen: 0, lastFix: 0,
         lyingSince: 0, stillSince: now,
         trail: [],
+        seqGaps: [],
       };
       this.people.set(id, p);
     }
 
     const dt = p.lastSeen ? clamp((now - p.lastSeen) / 1000, 0.05, 5) : 1;
     p.lastSeen = now;
+
+    // Link quality from the node's 0-255 sequence number: gaps are lost LoRa packets.
+    if (typeof pkt.S === 'number') {
+      if (typeof p.lastSeq === 'number') {
+        const gap = (pkt.S - p.lastSeq + 256) % 256;
+        if (gap > 0 && gap < 60) { // larger gaps mean a reboot or long outage, not loss
+          p.seqGaps.push(gap);
+          if (p.seqGaps.length > 60) p.seqGaps.shift();
+        }
+      }
+      p.lastSeq = pkt.S;
+    }
 
     const standing = pkt.G !== 0;
     if (!standing && p.posture !== 'lying') p.lyingSince = now;
@@ -283,6 +296,8 @@ export class Tracker {
       temp: p.temp, pressure: p.pressure,
       ranges: p.ranges,
       lastSeen: p.lastSeen,
+      // share of LoRa reports that arrived, over the last ~60 (null for nodes without S)
+      link: p.seqGaps.length ? +(p.seqGaps.length / p.seqGaps.reduce((a, b) => a + b, 0)).toFixed(3) : null,
       lyingFor: p.posture === 'lying' ? Math.round((now - p.lyingSince) / 1000) : 0,
       stillFor: p.moving ? 0 : Math.round((now - p.stillSince) / 1000),
       trail: p.trail,
